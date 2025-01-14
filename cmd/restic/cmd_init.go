@@ -23,8 +23,10 @@ The "init" command initializes a new repository.
 EXIT STATUS
 ===========
 
-Exit status is 0 if the command was successful, and non-zero if there was any error.
+Exit status is 0 if the command was successful.
+Exit status is 1 if there was any error.
 `,
+	GroupID:           cmdGroupDefault,
 	DisableAutoGenTag: true,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		return runInit(cmd.Context(), initOptions, globalOptions, args)
@@ -75,19 +77,19 @@ func runInit(ctx context.Context, opts InitOptions, gopts GlobalOptions, args []
 		return err
 	}
 
-	repo, err := ReadRepo(gopts)
+	gopts.Repo, err = ReadRepo(gopts)
 	if err != nil {
 		return err
 	}
 
-	gopts.password, err = ReadPasswordTwice(gopts,
+	gopts.password, err = ReadPasswordTwice(ctx, gopts,
 		"enter password for new repository: ",
 		"enter password again: ")
 	if err != nil {
 		return err
 	}
 
-	be, err := create(ctx, repo, gopts, gopts.extended)
+	be, err := create(ctx, gopts.Repo, gopts, gopts.extended)
 	if err != nil {
 		return errors.Fatalf("create repository at %s failed: %v\n", location.StripPassword(gopts.backends, gopts.Repo), err)
 	}
@@ -131,7 +133,7 @@ func runInit(ctx context.Context, opts InitOptions, gopts GlobalOptions, args []
 
 func maybeReadChunkerPolynomial(ctx context.Context, opts InitOptions, gopts GlobalOptions) (*chunker.Pol, error) {
 	if opts.CopyChunkerParameters {
-		otherGopts, _, err := fillSecondaryGlobalOpts(opts.secondaryRepoOptions, gopts, "secondary")
+		otherGopts, _, err := fillSecondaryGlobalOpts(ctx, opts.secondaryRepoOptions, gopts, "secondary")
 		if err != nil {
 			return nil, err
 		}
